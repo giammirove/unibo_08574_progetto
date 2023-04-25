@@ -24,7 +24,7 @@ typedef unsigned int size_t;
 typedef unsigned int bool;
 #define true 1
 #define false 0
-#include <umps/const.h>
+#include <uriscv/const.h>
 #endif
 
 #endif /* PANDOS_OS_CTYPES_H */

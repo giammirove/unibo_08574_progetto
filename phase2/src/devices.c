@@ -8,14 +8,15 @@
  */
 
 #include "arch/devices.h"
+#include "os/const.h"
 #include "os/semaphores.h"
 #include "os/util.h"
 #include "semaphores_impl.h"
-#include "umps/types.h"
-#include <umps/arch.h>
-#include <umps/const.h>
-#include <umps/cp0.h>
-#include <umps/libumps.h>
+#include "uriscv/types.h"
+#include <uriscv/arch.h>
+#include <uriscv/const.h>
+#include <uriscv/cpu.h>
+#include <uriscv/liburiscv.h>
 
 bool is_in_line(int dev, int il)
 {
@@ -47,7 +48,7 @@ inline iodev_t get_iodev(size_t *cmd_addr)
     return res;
 }
 
-inline void status_il_on_all(size_t *prev) { *prev |= STATUS_IM_MASK; }
+inline void status_il_on_all(size_t *prev) { *prev |= MIE_ALL; }
 inline void status_il_on(size_t *prev, int line) { *prev |= STATUS_IM(line); }
 
 inline void store_tod(int *time) { STCK(*time); }

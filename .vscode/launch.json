@@ -1,0 +1,20 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "URISCV GDB",
+            "type": "gdb",
+            "request": "attach",
+            "executable": "./build/phase2/phase2",
+            "target": "localhost:8080",
+            "remote": true,
+            "cwd": "${workspaceRoot}",
+            "valuesFormatting": "parseText",
+            "gdbpath": "/opt/riscv-orig/bin/riscv32-unknown-linux-gnu-gdb",
+            "stopAtEntry": true
+        }
+    ]
+}

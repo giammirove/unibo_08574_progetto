@@ -16,7 +16,7 @@
 #define DEVINTNUM 5
 #define DEVPERINT 8
 #else
-#include <umps/const.h>
+#include <uriscv/const.h>
 #endif
 
 /** A descriptor for a I/O device. */

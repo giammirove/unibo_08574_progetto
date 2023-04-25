@@ -10,6 +10,7 @@
  */
 
 #include "exception.h"
+#include "arch/processor.h"
 #include "os/asl.h"
 #include "os/ctypes.h"
 #include "os/puod.h"
@@ -18,9 +19,9 @@
 #include "os/semaphores.h"
 #include "os/syscall.h"
 #include "os/util.h"
-#include <umps/arch.h>
-#include <umps/cp0.h>
-#include <umps/libumps.h>
+#include <uriscv/arch.h>
+#include <uriscv/cpu.h>
+#include <uriscv/liburiscv.h>
 
 /**
  * \brief Finds device number of device that generated an interrupt.
@@ -33,6 +34,9 @@ size_t find_device_number(memaddr *bitmap)
 
     size_t val = *bitmap;
     while (val > 1 && device_n < N_DEV_PER_IL) {
+        if (val & 0x1)
+            return device_n;
+
         ++device_n;
         val >>= 1;
     }
@@ -76,10 +80,10 @@ static inline scheduler_control_t return_status(pcb_t *p, int status)
     if (p == active_process) {
         if (active_process == NULL)
             scheduler_panic("No active process (Interrupt Generic)\n");
-        active_process->p_s.reg_v0 = status;
+        active_process->p_s.reg_a0 = status;
         return CONTROL_RESCHEDULE;
     } else {
-        p->p_s.reg_v0 = status;
+        p->p_s.reg_a0 = status;
         return CONTROL_PRESERVE(active_process);
     }
 }
@@ -141,17 +145,16 @@ static inline scheduler_control_t interrupt_terminal()
         if ((status & TERMSTATMASK) == DEV_STATUS_NOTINSTALLED)
             scheduler_panic("Device is not installed!\n");
 
-        // pandos_kfprintf(&kdebug, "io_ack: %p\n", sem[0]);
         if ((status & TERMSTATMASK) == DEV_STATUS_TERMINAL_OK) {
             pcb_t *p = V(sem[i]);
             scheduler_control_t ctrl;
             if (p == NULL || p == active_process) {
                 if (active_process == NULL)
                     scheduler_panic("No active process (Interrupt Terminal)\n");
-                active_process->p_s.reg_v0 = status;
+                active_process->p_s.reg_a0 = status;
                 ctrl = CONTROL_RESCHEDULE;
             } else {
-                p->p_s.reg_v0 = status;
+                p->p_s.reg_a0 = status;
                 ctrl = CONTROL_PRESERVE(active_process);
             }
 
@@ -173,16 +176,18 @@ static inline scheduler_control_t interrupt_terminal()
  */
 static inline scheduler_control_t interrupt_handler(size_t cause)
 {
-    if (cause & CAUSE_IP(IL_IPI))
+    int mip = getMIP();
+
+    if (mip & CAUSE_IP(IL_IPI))
         return interrupt_ipi();
-    else if (cause & CAUSE_IP(IL_CPUTIMER))
+    else if (mip & CAUSE_IP(IL_CPUTIMER))
         return interrupt_local_timer();
-    else if (cause & CAUSE_IP(IL_TIMER))
+    else if (mip & CAUSE_IP(IL_TIMER))
         return interrupt_timer();
-    else if (cause & (CAUSE_IP(IL_DISK) | CAUSE_IP(IL_FLASH) |
-                      CAUSE_IP(IL_ETHERNET) | CAUSE_IP(IL_PRINTER)))
-        return interrupt_generic(cause);
-    else if (cause & CAUSE_IP(IL_TERMINAL))
+    else if (mip & (CAUSE_IP(IL_DISK) | CAUSE_IP(IL_FLASH) |
+                    CAUSE_IP(IL_ETHERNET) | CAUSE_IP(IL_PRINTER)))
+        return interrupt_generic(mip);
+    else if (mip & CAUSE_IP(IL_TERMINAL))
         return interrupt_terminal();
 
     /* The newly unblocked pcb is enqueued back on the Ready Queue and
@@ -208,14 +213,14 @@ inline void exception_handler()
                       sizeof(state_t));
     }
 
-    switch (CAUSE_GET_EXCCODE(get_cause())) {
+    int cause = (get_cause() << 1) >> 1;
+    switch (cause) {
         case 0:
-            ctrl = interrupt_handler(get_cause());
+            ctrl = interrupt_handler(cause);
             break;
         case 1:
         case 2:
         case 3:
-            // pandos_kprintf("PGFAULT %d\n", CAUSE_GET_EXCCODE(get_cause()));
             ctrl = pass_up_or_die((memaddr)PGFAULTEXCEPT);
             break;
         case 8:
@@ -228,11 +233,9 @@ inline void exception_handler()
             active_process->p_time += (now_tod - start_tod);
             /* ALWAYS increment the PC to prevent system call loops */
             active_process->p_s.pc_epc += WORD_SIZE;
-            active_process->p_s.reg_t9 += WORD_SIZE;
             break;
         default: /* 4-7, 9-12 */
 
-            pandos_kprintf("EXCP %d\n", CAUSE_GET_EXCCODE(get_cause()) + 1);
             ctrl = pass_up_or_die((memaddr)GENERALEXCEPT);
             break;
     }

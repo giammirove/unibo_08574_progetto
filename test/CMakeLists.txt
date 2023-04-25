@@ -25,7 +25,7 @@ foreach(TST ${TEST_FILES})
     target_compile_options(${TEST_NAME} PRIVATE ${CFLAGS_ALL})
     target_include_directories(${TEST_NAME}
         PUBLIC ${PROJECT_SOURCE_DIR}/include
-        PUBLIC ${UMPS3_DIR_PREFIX}/include/umps3)
+        PUBLIC ${RISCV_DIR_PREFIX}/include/uriscv)
     target_link_libraries(${TEST_NAME}
         sub::os
         m

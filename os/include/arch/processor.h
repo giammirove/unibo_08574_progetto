@@ -33,22 +33,20 @@ typedef struct state {
 #define reg_sp gpr[6]
 #else
 /** Use the architecture-provided state_t */
-#include <umps/types.h>
+#include <uriscv/types.h>
 #endif
 
 typedef signed int cpu_t;
 
 /** Page Table Entry descriptor */
-typedef struct pte_entry_t {
-    unsigned int pte_entry_hi;
-    unsigned int pte_entry_lo;
-} pte_entry_t;
+typedef unsigned int pte_entry_t;
 
 /** Support level context */
 typedef struct context_t {
     unsigned int stack_ptr;
     unsigned int status;
     unsigned int pc;
+    unsigned int mie;
 } context_t;
 
 /** Support level descriptor */
@@ -72,7 +70,9 @@ extern void panic();
 extern void wait();
 
 extern void set_status(size_t status);
+extern void set_mie(size_t mie);
 extern size_t get_status();
+extern size_t get_mie();
 extern size_t get_cause();
 extern void status_interrupts_on_nucleus(size_t *prev);
 extern void status_interrupts_off_nucleus(size_t *prev);

@@ -11,7 +11,7 @@
 #include "os/list.h"
 #include "os/util.h"
 #include "semaphores_impl.h"
-#include <umps/arch.h>
+#include <uriscv/arch.h>
 
 static int semaphores[SEMAPHORES_NUM];
 

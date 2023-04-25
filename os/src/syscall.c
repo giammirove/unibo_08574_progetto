@@ -16,8 +16,8 @@
 #include "os/scheduler.h"
 #include "os/semaphores.h"
 #include "os/util.h"
-#include "umps/arch.h"
-#include "umps/cp0.h"
+#include "uriscv/arch.h"
+#include "uriscv/cpu.h"
 
 /**
  * \brief CREATEPROCESS syscall implementation (SYSCALL -1)
@@ -38,12 +38,12 @@ static inline scheduler_control_t syscall_create_process()
 
     /* Checks if there are enough resources */
     if ((c = spawn_process(p_prio)) == NULL)
-        active_process->p_s.reg_v0 = NULL_PID;
+        active_process->p_s.reg_a0 = NULL_PID;
     else {
         c->p_support = p_support_struct;
         pandos_memcpy(&c->p_s, p_s, sizeof(state_t));
         insert_child(active_process, c);
-        active_process->p_s.reg_v0 = c->p_pid;
+        active_process->p_s.reg_a0 = c->p_pid;
     }
     return CONTROL_PRESERVE(active_process);
 }
@@ -58,13 +58,14 @@ static inline scheduler_control_t syscall_terminate_process()
     pcb_t *p;
     const pandos_pid_t pid = active_process->p_s.reg_a1;
 
-    if (pid == (pandos_pid_t)NULL)
-        return pass_up_or_die((memaddr)GENERALEXCEPT);
+    // TOOD: ERRORE LUCA DIOCANE
+    // if (pid == (pandos_pid_t)NULL)
+    //     return pass_up_or_die((memaddr)GENERALEXCEPT);
 
     /* Search for the target when pid != 0 */
     if (pid == 0)
         p = active_process;
-    else if (pid != 0 && (p = (pcb_t *)find_process(pid)) == NULL)
+    else if ((p = (pcb_t *)find_process(pid)) == NULL)
         return pass_up_or_die((memaddr)GENERALEXCEPT);
 
     if (kill_progeny(p))
@@ -115,19 +116,15 @@ static inline scheduler_control_t syscall_do_io()
         head_blocked(dev.semaphore) != NULL) {
         return pass_up_or_die((memaddr)GENERALEXCEPT);
     }
-    // if (active_process->p_support->sup_asid == 1)
-    //     pandos_kfprintf(&kdebug, "do_io %d %p %p\n",
-    //                     active_process->p_support->sup_asid, cmd_addr,
-    //                     dev.semaphore);
 
     if (*dev.semaphore > 0)
         scheduler_panic("A device syncronization semaphore has a value > 0");
 
     scheduler_control_t ctrl = P(dev.semaphore, active_process);
     if (active_process->p_prio)
-        status_il_on(&active_process->p_s.status, dev.interrupt_line);
+        status_il_on(&active_process->p_s.mie, dev.interrupt_line);
     else
-        status_il_on_all(&active_process->p_s.status);
+        status_il_on_all(&active_process->p_s.mie);
 
     /* Finally write the data */
     *cmd_addr = cmd_value;
@@ -141,7 +138,7 @@ static inline scheduler_control_t syscall_do_io()
  */
 static inline scheduler_control_t syscall_get_cpu_time()
 {
-    active_process->p_s.reg_v0 = active_process->p_time;
+    active_process->p_s.reg_a0 = active_process->p_time;
     return CONTROL_RESCHEDULE;
 }
 
@@ -161,7 +158,7 @@ static inline scheduler_control_t syscall_wait_for_clock()
  */
 static inline scheduler_control_t syscall_get_support_data()
 {
-    active_process->p_s.reg_v0 = (memaddr)active_process->p_support;
+    active_process->p_s.reg_a0 = (memaddr)active_process->p_support;
     return CONTROL_RESCHEDULE;
 }
 
@@ -177,11 +174,11 @@ static inline scheduler_control_t syscall_get_process_id()
 
     /* Return its own pid, the parent's or 0 otherwhise */
     if (!parent)
-        active_process->p_s.reg_v0 = active_process->p_pid;
+        active_process->p_s.reg_a0 = active_process->p_pid;
     else if (active_process->p_parent != NULL)
-        active_process->p_s.reg_v0 = active_process->p_parent->p_pid;
+        active_process->p_s.reg_a0 = active_process->p_parent->p_pid;
     else
-        active_process->p_s.reg_v0 = 0;
+        active_process->p_s.reg_a0 = 0;
 
     return CONTROL_RESCHEDULE;
 }
@@ -236,7 +233,6 @@ inline scheduler_control_t syscall_handler()
         case YIELD:
             return syscall_yield();
         default:
-            pandos_kprintf("-----syscall not handled %d\n", id);
             return pass_up_or_die((memaddr)GENERALEXCEPT);
     }
 }

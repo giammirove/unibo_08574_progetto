@@ -7,14 +7,14 @@ add_library(${PROJECT_NAME}
 )
 
 add_library(sub::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-set(CMAKE_C_COMPILER ${MIPSEL_CC})
+set(CMAKE_C_COMPILER ${RISCV_CC})
 # Force the MIPS linker to avoid the GCC fronted that screws things up
-set(CMAKE_C_LINK_EXECUTABLE "${MIPSEL_LD} <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
-set(CMAKE_ASM_COMPILER ${MIPSEL_CC})
+set(CMAKE_C_LINK_EXECUTABLE "${RISCV_LD} <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+set(CMAKE_ASM_COMPILER ${RISCV_CC})
 target_compile_options(${PROJECT_NAME} PRIVATE ${CFLAGS_ALL})
 target_include_directories(${PROJECT_NAME}
     PUBLIC ${PROJECT_SOURCE_DIR}/include
-    PUBLIC ${UMPS3_DIR_PREFIX}/include/umps3
+    PUBLIC ${RISCV_DIR_PREFIX}/include
 )
 target_link_libraries(${PROJECT_NAME}
     sub::os
@@ -36,22 +36,22 @@ foreach(TST ${TEST_FILES})
     add_executable(${TST} test/${TST}.c test/print.c)
     add_test(${TST} ${TST})
 
-    target_compile_options(${TST} PRIVATE ${CFLAGS_ALL})
-    target_link_options(${TST} PRIVATE -G0 -nostdlib -T ${UMPS3_DIR_PREFIX}/share/umps3/umpsaout.ldscript)
+    target_compile_options(${TST} PRIVATE ${CFLAGS_ALL} -c)
+    target_link_options(${TST} PRIVATE -G0 -nostdlib -T ${RISCV_DIR_PREFIX}/share/uriscv/uriscvaout.ldscript)
     target_include_directories(${TST}
       PUBLIC ${PROJECT_SOURCE_DIR}/include
-      PUBLIC ${UMPS3_DIR_PREFIX}/include/umps3)
+      PUBLIC ${RISCV_DIR_PREFIX}/include)
     target_link_libraries(${TST}
-        sub::libumps
+        sub::liburiscv
         sub::crti
     )
     add_custom_command(TARGET ${TST} POST_BUILD
-        COMMAND umps3-elf2umps -a ${TST}
+        COMMAND uriscv-elf2uriscv -a ${TST}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "Converting ELF ${TST} into uMPS3 Executable..."
     )
     add_custom_command(TARGET ${TST} POST_BUILD
-        COMMAND umps3-mkdev -f ${TST}.umps ${TST}.aout.umps
+        COMMAND uriscv-mkdev -f ${TST}.uriscv ${TST}.aout.uriscv
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "Converting uMPS3 binary ${TST} into uMPS3 flash device..."
     )

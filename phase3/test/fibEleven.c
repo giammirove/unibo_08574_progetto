@@ -1,6 +1,6 @@
 /*	Test of a CPU intensive recusive job */
 
-#include <umps/libumps.h>
+#include <uriscv/liburiscv.h>
 
 #include "test/print.h"
 #include "test/tconst.h"

@@ -13,7 +13,7 @@
 #include "os/ctypes.h"
 #include "os/util.h"
 #include "support/pager.h"
-#include <umps/arch.h>
+#include <uriscv/arch.h>
 
 /** The number of the least significant bit of BLOCKNUMBER in the COMMAND field.
  */

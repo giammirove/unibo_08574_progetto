@@ -24,4 +24,6 @@ extern void test();
  */
 extern void deallocate_support(support_t *s);
 
+extern void check();
+
 #endif /* PANDOS_TEST_H */

@@ -1,6 +1,6 @@
 /* Does nothing but outputs to the printer and terminates */
 
-#include <umps/libumps.h>
+#include <uriscv/liburiscv.h>
 
 #include "test/print.h"
 #include "test/tconst.h"

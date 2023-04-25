@@ -19,9 +19,9 @@
 #include "support/pager.h"
 #include "support/test.h"
 #include "test/tconst.h"
-#include "umps/arch.h"
-#include "umps/const.h"
-#include "umps/cp0.h"
+#include "uriscv/arch.h"
+#include "uriscv/const.h"
+#include "uriscv/cpu.h"
 
 /** Hardware constant: the command for printing a character. */
 #define PRINTCHR 2
@@ -128,8 +128,6 @@ static inline size_t syscall_writer(size_t il_n)
             terminal = true;
             break;
         default:
-            pandos_kfprintf(&kstderr, "Unimplemented write for class #%d\n",
-                            il_n);
             PANIC();
     }
     int *const semaphore = &semaphores[id];
@@ -211,9 +209,8 @@ static inline size_t sys_read_terminal()
  */
 static inline void support_syscall(support_t *current_support)
 {
-    active_process->p_s.pc_epc = active_process->p_s.reg_t9 += WORD_SIZE;
+    active_process->p_s.pc_epc += WORD_SIZE;
     const int id = (int)current_support->sup_except_state[GENERALEXCEPT].reg_a0;
-    pandos_kfprintf(&kdebug, "Syscall #%d\n", id);
     size_t result;
     switch (id) {
         case GET_TOD:
@@ -229,21 +226,24 @@ static inline void support_syscall(support_t *current_support)
             result = sys_read_terminal();
             break;
         case TERMINATE:
-        default:
             sys_terminate();
+            break;
+        default:
+            PANIC();
             return;
     }
-    current_support->sup_except_state[GENERALEXCEPT].reg_v0 = result;
+    current_support->sup_except_state[GENERALEXCEPT].reg_a0 = result;
 }
 
 inline void support_generic()
 {
+    // check();
     support_t *const current_support =
         (support_t *)SYSCALL(GETSUPPORTPTR, 0, 0, 0);
     state_t *const saved_state =
         &current_support->sup_except_state[GENERALEXCEPT];
-    const int id = CAUSE_GET_EXCCODE(
-        current_support->sup_except_state[GENERALEXCEPT].cause);
+    const int id =
+        (current_support->sup_except_state[GENERALEXCEPT].cause << 1) >> 1;
     switch (id) {
         case 8: /*Syscall*/
             support_syscall(current_support);
@@ -252,7 +252,6 @@ inline void support_generic()
             support_trap();
     }
     saved_state->pc_epc += WORD_SIZE;
-    saved_state->reg_t9 += WORD_SIZE;
     load_state(saved_state);
 }
 

@@ -17,8 +17,8 @@
 #include "support/pager.h"
 #include "support/support.h"
 #include "support/test.h"
-#include "umps/arch.h"
-#include <umps/libumps.h>
+#include "uriscv/arch.h"
+#include <uriscv/liburiscv.h>
 
 int main(int argc)
 {

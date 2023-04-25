@@ -1,6 +1,6 @@
 #include "os/util.h"
-#include <umps/arch.h>
-#include <umps/libumps.h>
+#include <uriscv/arch.h>
+#include <uriscv/liburiscv.h>
 
 #define LEN 32
 

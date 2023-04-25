@@ -20,10 +20,9 @@ static inline void init_process(memaddr init_pc)
 {
     pcb_t *p = spawn_process(false);
     RAMTOP(p->p_s.reg_sp);
-    p->p_s.pc_epc = p->p_s.reg_t9 = init_pc;
+    p->p_s.pc_epc = init_pc;
     status_interrupts_on_process(&p->p_s.status);
-    // TODO : da riattivare
-    // status_il_on_all(&p->p_s.status);
+    status_il_on_all(&p->p_s.mie);
     status_kernel_mode_on_nucleus(&p->p_s.status);
 }
 

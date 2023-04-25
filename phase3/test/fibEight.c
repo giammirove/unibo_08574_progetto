@@ -1,10 +1,9 @@
 /*	Test of a CPU intensive recusive job */
 
-#include <umps/libumps.h>
+#include <uriscv/liburiscv.h>
 
 #include "test/print.h"
 #include "test/tconst.h"
-
 
 int fib(int i);
 
@@ -26,7 +25,6 @@ void main()
     /* Terminate normally */
     SYSCALL(TERMINATE, 0, 0, 0);
 }
-
 
 int fib(int i)
 {

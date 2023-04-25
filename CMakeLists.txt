@@ -7,25 +7,25 @@ enable_testing()
 # Can be disabled to compile with the system's `cc` and run unit tests locally
 option(CROSS_COMPILE "Cross compile for the MIPS architecture" ON)
 option(DEBUG "Enable GDB debug flags" OFF)
-set(XT_PRG_PREFIX "mipsel-linux-gnu-" CACHE STRING "GCC cross compiler prefix")
+set(XT_PRG_PREFIX "riscv32-unknown-linux-gnu-" CACHE STRING "GCC cross compiler prefix")
 
-find_program(MIPSEL_CC ${XT_PRG_PREFIX}gcc REQUIRED)
-find_program(MIPSEL_LD ${XT_PRG_PREFIX}ld REQUIRED)
+find_program(RISCV_CC ${XT_PRG_PREFIX}gcc REQUIRED)
+find_program(RISCV_LD ${XT_PRG_PREFIX}ld REQUIRED)
 
-# Locate the UMPS3 header/obj files
-if(NOT DEFINED UMPS3_DIR_PREFIX)
-    set(UMPS3_DIR_PREFIX /usr)
-    if(EXISTS /usr/local/bin/umps3)
-        set(UMPS3_DIR_PREFIX /usr/local)
+# Locate the RISCV header/obj files
+if(NOT DEFINED RISCV_DIR_PREFIX)
+    set(RISCV_DIR_PREFIX /usr)
+    if(EXISTS /usr/local/bin/uriscv)
+        set(RISCV_DIR_PREFIX /usr/local)
     endif()
 endif()
 
-set(CFLAGS_LANG -pedantic -ffreestanding -Werror -Wall -ansi -std=gnu99)
+set(CFLAGS_LANG -pedantic -ffreestanding -Werror -Wall -c -static -ggdb -nostartfiles -nostdlib)
 if(CROSS_COMPILE)
     # Compile the kernel binary to a bare metal executable with these flags
-    set(CFLAGS_MIPS -mips1 -mabi=32 -mno-gpopt -EL -G0 -O0 -mno-abicalls -fno-pic -mfp32)
-    set(CFLAGS_ALL ${CMAKE_C_FLAGS} ${CFLAGS_LANG} ${CFLAGS_MIPS})
-    set(LDFLAGS_ALL ${LDFLAGS_ALL} -G0 -nostdlib -T ${UMPS3_DIR_PREFIX}/share/umps3/umpscore.ldscript -melf32ltsmip)
+    set(CFLAGS_MIPS -O0 -march=rv32imfd -mabi=ilp32d)
+    set(CFLAGS_ALL ${CFLAGS_LANG} ${CFLAGS_MIPS} -I${RISCV_DIR_PREFIX}/include)
+    set(LDFLAGS_ALL ${LDFLAGS_ALL} -G 0 -nostdlib -T ${RISCV_DIR_PREFIX}/share/uriscv/uriscvcore.ldscript )
 else()
     set(CFLAGS_ALL ${CMAKE_C_FLAGS} ${CFLAGS_LANG})
 endif()

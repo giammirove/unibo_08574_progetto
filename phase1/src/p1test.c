@@ -16,7 +16,7 @@
 #include "os/const.h"
 #include "os/pcb.h"
 #include "os/types.h"
-#include <umps/libumps.h>
+#include <uriscv/liburiscv.h>
 
 #define MAXPROC 20
 #define MAXSEM MAXPROC

@@ -10,6 +10,7 @@
 
 #include "support/pager.h"
 #include "os/const.h"
+#include "os/ctypes.h"
 #include "os/scheduler.h"
 #include "os/util.h"
 #include "support/storage.h"
@@ -68,23 +69,20 @@ inline bool init_page_table(page_table_t page_table, int asid)
     const memaddr data[PAGESIZE / sizeof(memaddr)];
     const int read_status = read_flash(asid, 0, (void *)data);
     if (read_status != DEV_STATUS_READY) {
-        pandos_kfprintf(&kstderr,
-                        "Failed header read (AISD = %d, status = %d)\n", asid,
-                        read_status);
         support_trap();
     }
-    const size_t text_file_size = data[5] / PAGESIZE;
+    // const size_t text_file_size = data[5] / PAGESIZE;
 
     // Initialize each Page Table entry.
     for (size_t i = 0; i < last_page_index; ++i) {
-        page_table[i].pte_entry_hi =
-            KUSEG + (i << VPNSHIFT) + (asid << ASIDSHIFT);
-        page_table[i].pte_entry_lo = i < text_file_size ? 0 : DIRTYON;
+        // DIRTY and R/W
+        page_table[i] = 0x80 | 0x6;
     }
+
     // The last Page Table entry is actually the stack.
-    page_table[last_page_index].pte_entry_hi =
-        KUSEG + GETPAGENO + (asid << ASIDSHIFT);
-    page_table[last_page_index].pte_entry_lo = DIRTYON;
+    // page_table[last_page_index].pte_entry_hi =
+    //     KUSEG + GETPAGENO + (asid << ASIDSHIFT);
+    // page_table[last_page_index].pte_entry_lo = DIRTYON;
 
     // Initialize the corresponding baton as well.
     swap_pool_batons[asid - 1] = false;
@@ -110,8 +108,6 @@ static inline bool is_valid_asid(int asid)
 static inline void set_swap_pool_baton(int asid, bool value)
 {
     if (!is_valid_asid(asid)) {
-        pandos_kfprintf(&kstderr,
-                        "memory.c: set_swap_pool_baton: invalid asid\n");
         PANIC();
     }
     swap_pool_batons[asid - 1] = value;
@@ -125,8 +121,6 @@ static inline void set_swap_pool_baton(int asid, bool value)
 static inline bool get_swap_pool_baton(int asid)
 {
     if (!is_valid_asid(asid)) {
-        pandos_kfprintf(&kstderr,
-                        "memory.c: get_swap_pool_baton: invalid asid\n");
         PANIC();
     }
     return swap_pool_batons[asid - 1];
@@ -169,16 +163,11 @@ inline void clean_after_uproc(int asid)
 static inline size_t vpn_to_index(size_t vpn)
 {
     if (vpn < KUSEG >> VPNSHIFT) {
-        pandos_kfprintf(
-            &kstderr,
-            "pager: vpn_to_index: vpn = %p < %p = KUSEG >> VPNSHIFT\n", vpn,
-            KUSEG >> VPNSHIFT);
         panic();
     }
     if (vpn == (KUSEG + GETPAGENO) >> VPNSHIFT)
         return MAXPAGES - 1;
     if (vpn >= (KUSEG >> VPNSHIFT) + MAXPAGES) {
-        pandos_kfprintf(&kstderr, "pager: vpn_to_index: invalid vpn %p\n", vpn);
         panic();
     }
     return vpn - (KUSEG >> VPNSHIFT);
@@ -192,15 +181,10 @@ static inline size_t vpn_to_index(size_t vpn)
 static inline size_t entryhi_to_vpn(memaddr entryhi)
 {
     if (entryhi < KUSEG) {
-        pandos_kfprintf(&kstderr,
-                        "pager: entryhi_to_vpn: entryhi = %p < %p = KUSEG\n",
-                        entryhi, KUSEG);
         panic();
     }
     if (entryhi >= KUSEG + (MAXPAGES - 1) * PAGESIZE &&
         (entryhi >> VPNSHIFT) != (KUSEG + GETPAGENO) >> VPNSHIFT) {
-        pandos_kfprintf(&kstderr, "pager: entryhi_to_vpn: %p?\n", entryhi,
-                        KUSEG);
         panic();
     }
     return entryhi >> VPNSHIFT;
@@ -213,53 +197,15 @@ static inline size_t entryhi_to_vpn(memaddr entryhi)
  */
 #define entryhi_to_index(entryhi) (vpn_to_index(entryhi_to_vpn(entryhi)))
 
-/**
- * \brief Add a Page Table entry to a random position in the TLB.
- * \param[in] pte The Page Table entry to be added.
- */
-static inline void add_random_in_tlb(pte_entry_t pte)
-{
-    setENTRYHI(pte.pte_entry_hi);
-    setENTRYLO(pte.pte_entry_lo);
-    TLBWR();
-}
-
 inline void tlb_refill_handler()
 {
     state_t *const saved_state = (state_t *)BIOSDATAPAGE;
-    const size_t index = entryhi_to_index(saved_state->entry_hi);
-    const pte_entry_t pte =
-        active_process->p_support->sup_private_page_table[index];
-
-    pandos_kfprintf(&kdebug, "TLB-Refill on %p\n", saved_state->entry_hi);
-    add_random_in_tlb(pte);
+    // const size_t index = entryhi_to_index(saved_state->entry_hi);
+    // const pte_entry_t pte =
+    //     active_process->p_support->sup_private_page_table[index];
+    //
+    // add_random_in_tlb(pte);
     load_state(saved_state);
-}
-
-/**
- * \brief Check whether the specified Page Table entry is in the TLB and, if
- * it's there, update CP0-Index. \param[in] pte The Page Table entry to look
- * for. \return True if the specified Page Table entry is in the TLB, false
- * otherwise.
- */
-static inline bool check_in_tlb(pte_entry_t pte)
-{
-    setENTRYHI(pte.pte_entry_hi);
-    TLBP();
-    return !(getINDEX() & PRESENTFLAG);
-}
-
-/**
- * \brief Adds the specified Page Table entry using the CP0-Index as location.
- * \param[in] pte The Page Table entry to be added.
- */
-static inline void update_tlb(pte_entry_t pte)
-{
-    if (check_in_tlb(pte)) {
-        setENTRYHI(pte.pte_entry_hi);
-        setENTRYLO(pte.pte_entry_lo);
-        TLBWI();
-    }
 }
 
 /**
@@ -309,7 +255,7 @@ static inline memaddr page_addr(size_t i)
  */
 static inline void mark_page_not_valid(page_table_t page_table, size_t index)
 {
-    page_table[index].pte_entry_lo &= !VALIDON;
+    page_table[index] &= !VALIDON;
 }
 
 /**
@@ -337,7 +283,7 @@ static inline void add_entry_swap_pool_table(size_t frame_no, size_t asid,
 static inline void update_page_table(page_table_t page_table, size_t index,
                                      memaddr frame_addr)
 {
-    page_table[index].pte_entry_lo = frame_addr | VALIDON | DIRTYON;
+    page_table[index] = frame_addr | VALIDON | DIRTYON;
 }
 
 inline void deactive_interrupts()
@@ -356,82 +302,77 @@ inline void active_interrupts()
 
 inline void support_tlb()
 {
-    support_t *const support = (support_t *)SYSCALL(GETSUPPORTPTR, 0, 0, 0);
-    if (support->sup_except_state[PGFAULTEXCEPT].cause == CAUSE_TLB_MOD)
-        // TLB-Modification
-        support_trap();
-    else {
-        // Gain mutual exclusion over the Swap Pool table.
-        SYSCALL(PASSEREN, (int)&sem_swap_pool_table, 0, 0);
-        set_swap_pool_baton(support->sup_asid, true);
-        state_t *const saved_state = &support->sup_except_state[PGFAULTEXCEPT];
-        // Pick a frame, i, from the Swap Pool. Which frame is selected is
-        // determined by the Pandos page replacement algorithm.
-        const int victim_frame = pick_page();
-        const size_t victim_frame_addr =
-            swap_pool_addr + victim_frame * PAGESIZE;
-        pandos_kfprintf(&kdebug, "Victim: %p\n", victim_frame_addr);
-        const size_t p_vpn = entryhi_to_vpn(saved_state->entry_hi),
-                     p_index = vpn_to_index(p_vpn);
-
-        const swap_t swap = swap_pool_table[victim_frame];
-        // Determine if frame i is occupied.
-        if (check_frame_occupied(swap)) {
-            const size_t k_vpn = entryhi_to_vpn(swap.sw_pte->pte_entry_hi),
-                         k_index = vpn_to_index(k_vpn);
-
-            // Atomically
-            deactive_interrupts();
-            // Update process x’s Page Table: mark Page Table entry k as not
-            // valid.
-            mark_page_not_valid(support->sup_private_page_table, k_index);
-            // Update the TLB, if needed. The TLB is a cache of the most
-            // recently executed process’s Page Table entries.
-            update_tlb(*swap.sw_pte);
-            active_interrupts();
-
-            // Write the contents of frame victim_frame
-            // to the correct location on process x’s backing store/flash device
-            const int write_status = write_flash(
-                swap.sw_asid, k_index, (void *)page_addr(victim_frame));
-            if (write_status != DEV_STATUS_READY) {
-                pandos_kfprintf(
-                    &kstderr,
-                    "Error on flash write (k_index = %d, status = %d)\n",
-                    k_index, write_status);
-                support_trap();
-            }
-        }
-
-        //  Read the contents of the Current Process’s backing store/flash
-        //  device logical page p into frame victim_frame.
-        const int read_status =
-            read_flash(support->sup_asid, p_index, (void *)victim_frame_addr);
-        if (read_status != DEV_STATUS_READY) {
-            pandos_kfprintf(&kstderr,
-                            "Error on flash read (p_index = %d, status = %d)\n",
-                            p_index, read_status);
-            support_trap();
-        }
-
-        // Atomically
-        deactive_interrupts();
-        // Update the Swap Pool table’s entry.
-        add_entry_swap_pool_table(victim_frame, support->sup_asid, p_vpn,
-                                  support->sup_private_page_table);
-        // Update the Current Process’s Page Table entry.
-        update_page_table(support->sup_private_page_table, p_index,
-                          victim_frame_addr);
-        // Update the TLB.
-        update_tlb(support->sup_private_page_table[p_index]);
-        active_interrupts();
-
-        // Release mutual exclusion over the Swap Pool table.
-        SYSCALL(VERHOGEN, (int)&sem_swap_pool_table, 0, 0);
-        set_swap_pool_baton(support->sup_asid, false);
-
-        // Return control to the Current Process to retry the instruction that
-        // caused the page fault: LDST on the saved exception state.
-        load_state(saved_state);
-    }
+    // support_t *const support = (support_t *)SYSCALL(GETSUPPORTPTR, 0, 0, 0);
+    // if (support->sup_except_state[PGFAULTEXCEPT].cause == CAUSE_TLB_MOD)
+    //     // TLB-Modification
+    //     support_trap();
+    // else {
+    //     // Gain mutual exclusion over the Swap Pool table.
+    //     SYSCALL(PASSEREN, (int)&sem_swap_pool_table, 0, 0);
+    //     set_swap_pool_baton(support->sup_asid, true);
+    //     state_t *const saved_state =
+    //     &support->sup_except_state[PGFAULTEXCEPT];
+    //     // Pick a frame, i, from the Swap Pool. Which frame is selected is
+    //     // determined by the Pandos page replacement algorithm.
+    //     const int victim_frame = pick_page();
+    //     size_t victim_frame_addr = swap_pool_addr + victim_frame * PAGESIZE;
+    //     const size_t p_vpn = entryhi_to_vpn(saved_state->entry_hi),
+    //                  p_index = vpn_to_index(p_vpn);
+    //
+    //     const swap_t swap = swap_pool_table[victim_frame];
+    //     // Determine if frame i is occupied.
+    //     if (check_frame_occupied(swap)) {
+    //         const size_t k_vpn = entryhi_to_vpn(swap.sw_pte->pte_entry_hi),
+    //                      k_index = vpn_to_index(k_vpn);
+    //
+    //         // Atomically
+    //         deactive_interrupts();
+    //         // Update process x’s Page Table: mark Page Table entry k as not
+    //         // valid.
+    //         mark_page_not_valid(support->sup_private_page_table, k_index);
+    //         // Update the TLB, if needed. The TLB is a cache of the most
+    //         // recently executed process’s Page Table entries.
+    //         update_tlb(*swap.sw_pte);
+    //         active_interrupts();
+    //
+    //         // Write the contents of frame victim_frame
+    //         // to the correct location on process x’s backing store/flash d
+    //         vice const int write_status = write_flash(
+    //             swap.sw_asid, k_index, (void *)page_addr(victim_frame));
+    //         if (write_status != DEV_STATUS_READY) {
+    //             support_trap();
+    //         }
+    //     }
+    //
+    //     //  Read the contents of the Current Process’s backing store/flash
+    //     //  device logical page p into frame victim_frame.
+    //     const int read_status =
+    //         read_flash(support->sup_asid, p_index, (void
+    //         *)victim_frame_addr);
+    //     if (read_status != DEV_STATUS_READY) {
+    //         support_trap();
+    //     }
+    //
+    //     // Atomically
+    //     deactive_interrupts();
+    //     // Update the Swap Pool table’s entry.
+    //     add_entry_swap_pool_table(victim_frame, support->sup_asid, p_vpn,
+    //                               support->sup_private_page_table);
+    //     // Update the Current Process’s Page Table entry.
+    //     update_page_table(support->sup_private_page_table, p_index,
+    //                       victim_frame_addr);
+    //     // Update the TLB.
+    //     update_tlb(support->sup_private_page_table[p_index]);
+    //     active_interrupts();
+    //
+    //     // Release mutual exclusion over the Swap Pool table.
+    //     SYSCALL(VERHOGEN, (int)&sem_swap_pool_table, 0, 0);
+    //     set_swap_pool_baton(support->sup_asid, false);
+    //
+    //     // Return control to the Current Process to retry the instruction
+    //     that
+    //     // caused the page fault: LDST on the saved exception state.
+    //     load_state(saved_state);
+    // }
+    PANIC();
 }

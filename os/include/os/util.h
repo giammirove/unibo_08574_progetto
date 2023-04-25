@@ -126,7 +126,6 @@ static inline void pandos_memcpy(void *dest, void *src, size_t len)
  */
 int pandos_pow(int base, unsigned int exp);
 
-// TODO
 size_t __pandos_printf(void *target,
                        size_t (*writer)(void *, const char *, size_t len),
                        const char *fmt, va_list varg);

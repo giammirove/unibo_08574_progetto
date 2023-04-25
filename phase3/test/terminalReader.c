@@ -1,6 +1,6 @@
 /*	Test the terminal for reading user input */
 
-#include <umps/libumps.h>
+#include <uriscv/liburiscv.h>
 
 #include "test/print.h"
 #include "test/tconst.h"

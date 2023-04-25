@@ -18,9 +18,8 @@
 #include "os/scheduler_impl.h"
 #include "os/util.h"
 #include "os/util_impl.h"
-#include "umps/arch.h"
-#include "umps/cp0.h"
-#include "umps/arch.h"
+#include "uriscv/arch.h"
+#include "uriscv/cpu.h"
 
 #define process_queue(p) ((p)->p_prio ? &ready_queue_hi : &ready_queue_lo)
 
@@ -93,7 +92,6 @@ static inline
     if (p->p_parent != NULL && out_child(p) != p)
         return 2;
 
-    pandos_kprintf("kill proc\n");
     --process_count;
 
     if (!list_null(&p->p_list)) {
@@ -139,13 +137,12 @@ static inline void scheduler_wait()
 
     size_t status = get_status();
     status_interrupts_on_nucleus(&status);
-    // status_local_timer_toggle(&status);
-    status_il_on_all(&status);
+    size_t mie = get_mie();
+    status_il_on_all(&mie);
     set_status(status);
-    // pandos_kprintf("wait()\n");
+    set_mie(mie);
 
     wait();
-    // pandos_kprintf("stop wait()\n");
     schedule(NULL, false);
 }
 
@@ -155,15 +152,13 @@ static inline void scheduler_takeover()
     reset_local_timer();
     /* Disable the processor Local Timer on hi processes */
     if (active_process->p_prio)
-        status_local_timer_on(&active_process->p_s.status);
+        status_local_timer_off(&active_process->p_s.mie);
     store_tod(&start_tod);
-    // pandos_kprintf("TAKEOVER %d\n", active_process->p_pid);
     load_state(&active_process->p_s);
 }
 
 static inline void wait_or_die()
 {
-    // pandos_kprintf("wait or die %d \n", ++w);
     if (!process_count)
         halt();
     else if (softblock_count)
@@ -174,7 +169,6 @@ static inline void wait_or_die()
 
 void schedule(pcb_t *pcb, bool enqueue)
 {
-    // pandos_kprintf("schedule\n");
     if (enqueue && pcb != NULL) {
         enqueue_process(pcb);
     }
@@ -206,7 +200,7 @@ void schedule(pcb_t *pcb, bool enqueue)
 }
 
 #ifndef __x86_64__
-#include <umps/arch.h>
+#include <uriscv/arch.h>
 #define __p(...)                                                               \
     __pandos_printf((termreg_t *)DEV_REG_ADDR(IL_TERMINAL, 0), serial_writer,  \
                     __VA_ARGS__)

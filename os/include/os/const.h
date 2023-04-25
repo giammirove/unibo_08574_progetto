@@ -75,7 +75,6 @@
 #define TRANSM_STATUS 0x8
 #define TRANSM_COMMAND 0xC
 
-
 /*Devices registers addresses */
 #define DEVICE_STATUS(il_n, dev_n)                                             \
     (memaddr *)(DEV_REG_ADDR(il_n, dev_n) + RECV_STATUS)
@@ -90,6 +89,21 @@
 #define IMON 0x0000FF00
 #define TEBITON 0x08000000
 #define DISABLEINTS 0xFFFFFFFE
+
+#define MSTATUS_MIE_MASK 0x8
+#define MSTATUS_MPIE_MASK 0x80
+#define MSTATUS_MPP_MASK 0x1800
+#define MIE_MTIE_MASK 0x40
+#define MIP_MTIP_MASK 0x40
+#define MIE_ALL 0xFFFFFFFF
+
+#define MSTATUS_MPIE_BIT 7
+#define MSTATUS_MIE_BIT 3
+#define MSTATUS_MPRV_BIT 17
+#define MSTATUS_MPP_BIT 11
+#define MSTATUS_MPP_M 0x1800
+#define MSTATUS_MPP_U 0x0000
+#define MSTATUS_MPP_MASK 0x1800
 
 /* Cause register constants */
 #define GETEXECCODE 0x0000007C
@@ -176,7 +190,6 @@
 #define USERPGTBLSIZE MAXPAGES
 #define OSFRAMES 32
 
-#define FLASHPOOLSTART (RAMSTART + (OSFRAMES * PAGESIZE))
 #define DISKPOOLSTART (FLASHPOOLSTART + (DEVPERINT * PAGESIZE))
 #define FRAMEPOOLSTART (DISKPOOLSTART + (DEVPERINT * PAGESIZE))
 
@@ -186,7 +199,7 @@
 #define FLASHBACK 0
 #define BACKINGSTORE FLASHBACK
 
-#define UPROCMAX 8
+#define UPROCMAX 1
 #define POOLSIZE (UPROCMAX * 2)
 /* End of Mikeyg constants */
 

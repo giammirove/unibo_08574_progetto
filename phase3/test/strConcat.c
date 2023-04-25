@@ -1,7 +1,7 @@
 
 /* concatenates two strings together and prints them out */
 
-#include <umps/libumps.h>
+#include <uriscv/liburiscv.h>
 
 #include "test/print.h"
 #include "test/tconst.h"

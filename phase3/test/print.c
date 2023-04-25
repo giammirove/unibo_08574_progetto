@@ -1,6 +1,6 @@
 /* Function to call print parameterized output to a terminal device */
 
-#include <umps/libumps.h>
+#include <uriscv/liburiscv.h>
 
 #include "test/tconst.h"
 
