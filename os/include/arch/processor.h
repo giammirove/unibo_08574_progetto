@@ -39,7 +39,10 @@ typedef struct state {
 typedef signed int cpu_t;
 
 /** Page Table Entry descriptor */
-typedef unsigned int pte_entry_t;
+typedef struct pte_entry_t {
+    unsigned int pte_entry_hi;
+    unsigned int pte_entry_lo;
+} pte_entry_t;
 
 /** Support level context */
 typedef struct context_t {
