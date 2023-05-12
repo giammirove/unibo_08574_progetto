@@ -97,7 +97,7 @@ static inline scheduler_control_t interrupt_generic(int cause)
     int il = IL_DISK;
     /* inverse priority */
     for (int i = IL_DISK; i < IL_PRINTER + 1; i++) {
-        if (cause & CAUSE_IP(i)) {
+        if (cause == (i)) {
             il = i;
             break;
         }
@@ -139,7 +139,6 @@ static inline scheduler_control_t interrupt_terminal()
                              &term_reg->recv_command};
     int *sem[] = {get_semaphore(IL_TERMINAL, devicenumber, true),
                   get_semaphore(IL_TERMINAL, devicenumber, false)};
-
     for (int i = 0; i < 2; ++i) {
         int status = statuses[i];
         if ((status & TERMSTATMASK) == DEV_STATUS_NOTINSTALLED)
@@ -176,18 +175,17 @@ static inline scheduler_control_t interrupt_terminal()
  */
 static inline scheduler_control_t interrupt_handler(size_t cause)
 {
-    int mip = getMIP();
-
-    if (mip & CAUSE_IP(IL_IPI))
+    cause &= 0x7FFFFFFF;
+    if (cause == (IL_IPI))
         return interrupt_ipi();
-    else if (mip & CAUSE_IP(IL_CPUTIMER))
+    else if (cause == (IL_CPUTIMER))
         return interrupt_local_timer();
-    else if (mip & CAUSE_IP(IL_TIMER))
+    else if (cause == (IL_TIMER))
         return interrupt_timer();
-    else if (mip & (CAUSE_IP(IL_DISK) | CAUSE_IP(IL_FLASH) |
-                    CAUSE_IP(IL_ETHERNET) | CAUSE_IP(IL_PRINTER)))
-        return interrupt_generic(mip);
-    else if (mip & CAUSE_IP(IL_TERMINAL))
+    else if (cause == (IL_DISK) || cause == (IL_FLASH) ||
+             cause == (IL_ETHERNET) || cause == (IL_PRINTER))
+        return interrupt_generic(cause);
+    else if (cause == (IL_TERMINAL))
         return interrupt_terminal();
 
     /* The newly unblocked pcb is enqueued back on the Ready Queue and
@@ -213,31 +211,36 @@ inline void exception_handler()
                       sizeof(state_t));
     }
 
-    int cause = (get_cause() << 1) >> 1;
-    switch (cause) {
-        case 0:
-            ctrl = interrupt_handler(cause);
-            break;
-        case 1:
-        case 2:
-        case 3:
-            ctrl = pass_up_or_die((memaddr)PGFAULTEXCEPT);
-            break;
-        case 8:
-            if (active_process == NULL)
-                scheduler_panic(
-                    "A syscall happened while active_process was NULL\n");
-            store_tod(&start_tod);
-            ctrl = syscall_handler();
-            store_tod(&now_tod);
-            active_process->p_time += (now_tod - start_tod);
-            /* ALWAYS increment the PC to prevent system call loops */
-            active_process->p_s.pc_epc += WORD_SIZE;
-            break;
-        default: /* 4-7, 9-12 */
+    int cause = get_cause();
+    if (CAUSE_IS_INT(cause))
+        ctrl = interrupt_handler(cause);
+    else {
+        cause = (cause << 1) >> 1;
+        switch (cause) {
+            case 24:
+            case 25:
+            case 26:
+                ctrl = pass_up_or_die((memaddr)PGFAULTEXCEPT);
+                break;
+            case 8:
+            case 9:
+            case 10:
+            case 11:
+                if (active_process == NULL)
+                    scheduler_panic(
+                        "A syscall happened while active_process was NULL\n");
+                store_tod(&start_tod);
+                ctrl = syscall_handler();
+                store_tod(&now_tod);
+                active_process->p_time += (now_tod - start_tod);
+                /* ALWAYS increment the PC to prevent system call loops */
+                active_process->p_s.pc_epc += WORD_SIZE;
+                break;
+            default: /* 4-7, 9-12 */
 
-            ctrl = pass_up_or_die((memaddr)GENERALEXCEPT);
-            break;
+                ctrl = pass_up_or_die((memaddr)GENERALEXCEPT);
+                break;
+        }
     }
 
     schedule(ctrl.pcb, ctrl.enqueue);

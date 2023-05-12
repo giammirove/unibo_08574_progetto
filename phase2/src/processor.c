@@ -99,5 +99,6 @@ inline void status_kernel_mode_off_process(size_t *prev)
 inline void cause_clean(size_t *prev) { *prev &= CLEAREXECCODE; }
 inline void cause_reserved_instruction(size_t *prev)
 {
-    *prev |= (EXC_RI << CAUSESHIFT);
+    // TODO: check this
+    //  *prev |= (EXC_RI << CAUSESHIFT);
 }

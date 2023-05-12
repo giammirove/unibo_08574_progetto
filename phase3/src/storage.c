@@ -22,7 +22,7 @@
 int read_flash(unsigned int dev, size_t block, void *dest)
 {
     deactive_interrupts();
-    dtpreg_t *const reg = (dtpreg_t *)DEV_REG_ADDR(FLASHINT, dev - 1);
+    dtpreg_t *const reg = (dtpreg_t *)DEV_REG_ADDR(IL_FLASH, dev - 1);
     const size_t cmd = FLASHREAD | block << FLASHCMDSHIFT;
     reg->data0 = (memaddr)dest;
     const int res = SYSCALL(DOIO, (int)&reg->command, cmd, 0);
@@ -33,7 +33,7 @@ int read_flash(unsigned int dev, size_t block, void *dest)
 int write_flash(unsigned int dev, size_t block, void *src)
 {
     deactive_interrupts();
-    dtpreg_t *const reg = (dtpreg_t *)DEV_REG_ADDR(FLASHINT, dev - 1);
+    dtpreg_t *const reg = (dtpreg_t *)DEV_REG_ADDR(IL_FLASH, dev - 1);
     const size_t cmd = FLASHWRITE | block << FLASHCMDSHIFT;
     reg->data0 = (memaddr)src;
     const int res = SYSCALL(DOIO, (int)&reg->command, cmd, 0);

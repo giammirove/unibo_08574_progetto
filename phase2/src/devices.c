@@ -29,7 +29,8 @@ inline iodev_t get_iodev(size_t *cmd_addr)
 {
     iodev_t res = {NULL, 0};
     int int_l = -1;
-    int dev_n = ((unsigned int)cmd_addr - DEV_REG_START) / DEV_REG_SIZE;
+    unsigned int addr = (unsigned int)cmd_addr;
+    int dev_n = ((unsigned int)addr - DEV_REG_START) / DEV_REG_SIZE;
     for (int i = IL_DISK; i < IL_TERMINAL + 1; i++) {
         if (is_in_line(dev_n, i)) {
             int_l = i;
