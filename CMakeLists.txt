@@ -15,12 +15,12 @@ find_program(RISCV_LD ${XT_PRG_PREFIX}ld REQUIRED)
 # Locate the RISCV header/obj files
 if(NOT DEFINED RISCV_DIR_PREFIX)
     set(RISCV_DIR_PREFIX /usr)
-    if(EXISTS /usr/local/bin/uriscv)
+    if(EXISTS /usr/local/bin/uriscv-cli)
         set(RISCV_DIR_PREFIX /usr/local)
     endif()
 endif()
 
-set(CFLAGS_LANG -pedantic -ffreestanding -Werror -Wall -c -static -ggdb -nostartfiles -nostdlib)
+set(CFLAGS_LANG -pedantic -ffreestanding -Werror -Wall -ansi -std=gnu99 -c -static -ggdb -nostartfiles -nostdlib)
 if(CROSS_COMPILE)
     # Compile the kernel binary to a bare metal executable with these flags
     set(CFLAGS_MIPS -O0 -march=rv32imfd -mabi=ilp32d)

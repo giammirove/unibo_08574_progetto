@@ -13,7 +13,7 @@
             "remote": true,
             "cwd": "${workspaceRoot}",
             "valuesFormatting": "parseText",
-            "gdbpath": "/opt/riscv-orig/bin/riscv32-unknown-linux-gnu-gdb",
+            "gdbpath": "/usr/bin/riscv32-unknown-linux-gnu-gdb",
             "stopAtEntry": true
         }
     ]

@@ -70,14 +70,16 @@ static inline
     semd_t *
     find_semd(list_head *list, int *sem_addr)
 {
-    const list_head *item;
-    semd_t dummy = {sem_addr};
+    semd_t *sem;
+    struct list_head *pos;
 
-    if (list == NULL || sem_addr == NULL ||
-        (item = list_search(&dummy.s_link, list, key_cmp)) == NULL)
-        return NULL;
+    list_for_each(pos,list) {                     /* Looking for Semaphore */
+        sem = container_of(pos, semd_t, s_link);
+        if(sem->s_key == sem_addr)
+            return sem;
+    }
+    return NULL;
 
-    return container_of(item, semd_t, s_link);
 }
 
 void init_asl()
@@ -92,6 +94,8 @@ void init_asl()
 
 int insert_blocked(int *sem_addr, pcb_t *p)
 {
+    int aa = (int)sem_addr;
+    (void)aa;
     semd_t *sem;
 
     if (sem_addr == NULL)
@@ -105,6 +109,9 @@ int insert_blocked(int *sem_addr, pcb_t *p)
     if ((sem = find_semd(&semd_h, sem_addr)) == NULL &&
         (sem = alloc_semd(sem_addr)) == NULL)
         return 4;
+
+    int dd = (int)sem;
+    (void)dd;
     list_add_tail(&p->p_list, &sem->s_procq);
     p->p_sem_add = sem_addr;
     return 0;
@@ -113,6 +120,8 @@ int insert_blocked(int *sem_addr, pcb_t *p)
 pcb_t *out_blocked(pcb_t *pcb)
 {
     semd_t *sem;
+    if ((sem = find_semd(&semd_h, pcb->p_sem_add)) == NULL)
+        return NULL;
     if (pcb == NULL || (sem = find_semd(&semd_h, pcb->p_sem_add)) == NULL ||
         !list_contains(&pcb->p_list, &sem->s_procq))
         return NULL;
@@ -121,6 +130,8 @@ pcb_t *out_blocked(pcb_t *pcb)
     pcb->p_sem_add = NULL;
     if (list_empty(&sem->s_procq) && free_semd(sem))
         return NULL;
+    int dd = pcb->p_pid;
+    (void)dd;
     return pcb;
 }
 
@@ -129,11 +140,15 @@ pcb_t *head_blocked(int *sem_addr)
     semd_t *sem;
     if (sem_addr == NULL || (sem = find_semd(&semd_h, sem_addr)) == NULL)
         return NULL;
+    int dd = (int)sem;
+    (void)dd;
     /* Assumes that a semd in semd_h contains at least one pcb */
     return container_of(sem->s_procq.next, pcb_t, p_list);
 }
 
 pcb_t *remove_blocked(int *sem_addr)
 {
+    int aa = (int)sem_addr;
+    (void)aa;
     return out_blocked(head_blocked(sem_addr));
 }
