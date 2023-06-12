@@ -243,7 +243,7 @@ inline void support_generic()
     state_t *const saved_state =
         &current_support->sup_except_state[GENERALEXCEPT];
     const int id =
-        (current_support->sup_except_state[GENERALEXCEPT].cause << 1) >> 1;
+        current_support->sup_except_state[GENERALEXCEPT].cause & 0x7fffffff;
     switch (id) {
         case 8: /*Syscall*/
             support_syscall(current_support);

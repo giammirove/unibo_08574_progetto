@@ -215,7 +215,7 @@ inline void exception_handler()
     if (CAUSE_IS_INT(cause))
         ctrl = interrupt_handler(cause);
     else {
-        cause = (cause << 1) >> 1;
+        cause = cause & 0x7fffffff;
         switch (cause) {
             case 24:
             case 25:
