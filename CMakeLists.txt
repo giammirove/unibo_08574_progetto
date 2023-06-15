@@ -7,7 +7,13 @@ enable_testing()
 # Can be disabled to compile with the system's `cc` and run unit tests locally
 option(CROSS_COMPILE "Cross compile for the MIPS architecture" ON)
 option(DEBUG "Enable GDB debug flags" OFF)
+find_program(GCC_TEST riscv32-unknown-linux-gnu-gcc)
+if (GCC_TEST)
 set(XT_PRG_PREFIX "riscv32-unknown-linux-gnu-" CACHE STRING "GCC cross compiler prefix")
+else ()
+set(XT_PRG_PREFIX "riscv64-unknown-elf-" CACHE STRING "GCC cross compiler prefix")
+endif()
+
 
 find_program(RISCV_CC ${XT_PRG_PREFIX}gcc REQUIRED)
 find_program(RISCV_LD ${XT_PRG_PREFIX}ld REQUIRED)

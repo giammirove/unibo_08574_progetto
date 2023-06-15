@@ -17,7 +17,7 @@
 #include "support/support.h"
 
 /** TLB-Modification exception. */
-#define CAUSE_TLB_MOD 1
+#define CAUSE_TLB_MOD 24
 
 /** Swap Pool starting address (right after the OS .text and .data). */
 #define SWAP_POOL_ADDR                                                         \
