@@ -37,7 +37,7 @@ foreach(TST ${TEST_FILES})
     add_test(${TST} ${TST})
 
     target_compile_options(${TST} PRIVATE ${CFLAGS_ALL} -c)
-    target_link_options(${TST} PRIVATE -G0 -nostdlib -T ${RISCV_DIR_PREFIX}/share/uriscv/uriscvaout.ldscript)
+    target_link_options(${TST} PRIVATE -march=rv32imfd -mabi=ilp32d -m elf32lriscv -G0 -nostdlib -T ${RISCV_DIR_PREFIX}/share/uriscv/uriscvaout.ldscript)
     target_include_directories(${TST}
       PUBLIC ${PROJECT_SOURCE_DIR}/include
       PUBLIC ${RISCV_DIR_PREFIX}/include)
