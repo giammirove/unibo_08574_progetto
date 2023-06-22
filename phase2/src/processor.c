@@ -34,8 +34,6 @@ inline void null_state(state_t *s)
     s->status = UNINSTALLED;
     s->pc_epc = 0;
     s->mie = 0;
-    s->hi = 0;
-    s->lo = 0;
     for (int i = 0; i < STATE_GPR_LEN; i++)
         s->gpr[i] = 0;
 }
